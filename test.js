@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Twice-Daily Prompt Sender (Auto Send)
-// @version      0.4
+// @version      0.5
 // @description  At 9–10 AM & 10–11 PM: open “Daily” chat, type & send your prompt with tiny delays.
 // @match        https://www.typingmind.com/*
 // @grant        none
@@ -10,7 +10,7 @@
   console.log('🔧 Twice-Daily Prompt Sender initializing…')
 
   const WINDOWS = {
-    morning: { start: 9, end: 10, key: 'tm_sent_morning' },
+    morning: { start: 9, end: 12, key: 'tm_sent_morning' },
     evening: { start: 22, end: 23, key: 'tm_sent_evening' }
   }
   const PROMPT =
