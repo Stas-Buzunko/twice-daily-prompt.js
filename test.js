@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Twice-Daily Prompt Sender (Auto Send)
-// @version      0.8
+// @version      0.9
 // @description  At 9–12 AM & 10–11 PM: open “Daily” chat, type & send your prompt with tiny delays.
 // @match        https://www.typingmind.com/*
 // @grant        none
@@ -56,54 +56,46 @@
     return true
   }
 
-  // Sequence: focus textarea, type prompt, click send
-  async function sendPromptSequence(win) {
-    // tiny pause to let the chat view load
-    await delay(200)
+  // Calls React’s internal change handler by using the native property setter.
+  function setNativeValue(el, value) {
+    const proto = Object.getPrototypeOf(el)
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value').set
+    setter.call(el, value)
+  }
 
-    const ta = document.getElementById('chat-input-textbox')
-    if (!ta) {
-      console.error('❌ chat-input-textbox not found')
-      return
+  // Simulate typing into a React‐controlled textarea
+  async function typeReactText(el, text, delayMs = 75) {
+    for (let ch of text) {
+      const newVal = el.value + ch
+      setNativeValue(el, newVal)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      await delay(delayMs)
     }
-    console.log('✅ Found textarea')
-    ta.focus()
-    console.log('✍️ Typing prompt…')
-    await typeText(ta, PROMPT, 50)
+  }
 
-    // tiny pause before clicking Send
+  async function sendPromptSequence(win) {
+    await delay(200) // wait for chat pane
+    const ta = document.getElementById('chat-input-textbox')
+    if (!ta) return console.error('❌ textarea not found')
+
+    ta.focus()
     await delay(100)
 
+    console.log('✍️ Typing prompt…')
+    await typeReactText(ta, PROMPT, 50)
+
+    await delay(100)
     const sendBtn = document.querySelector(
       'button[data-element-id="send-button"]'
     )
-    if (!sendBtn) {
-      console.error('❌ send-button not found')
-      return
-    }
-    console.log('✅ Found Send button, clicking…')
+    if (!sendBtn) return console.error('❌ send button not found')
+
+    console.log('✅ Clicking Send…')
     sendBtn.click()
 
-    // optional small delay before marking
     await delay(100)
-
     console.log('✉️ Prompt sent.')
     markSent(win)
-  }
-
-  async function typeText(el, text, delayMs = 75) {
-    for (let ch of text) {
-      // append one character
-      el.value += ch
-      // dispatch a proper InputEvent
-      const ev = new InputEvent('input', {
-        bubbles: true,
-        data: ch,
-        inputType: 'insertText'
-      })
-      el.dispatchEvent(ev)
-      await delay(delayMs)
-    }
   }
 
   // Main check routine
