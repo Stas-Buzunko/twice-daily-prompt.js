@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Twice-Daily Prompt Sender (Auto Send)
-// @version      0.7
-// @description  At 9–10 AM & 10–11 PM: open “Daily” chat, type & send your prompt with tiny delays.
+// @version      0.8
+// @description  At 9–12 AM & 10–11 PM: open “Daily” chat, type & send your prompt with tiny delays.
 // @match        https://www.typingmind.com/*
 // @grant        none
 // ==/UserScript==
@@ -66,13 +66,13 @@
       console.error('❌ chat-input-textbox not found')
       return
     }
-    console.log('✅ Found textarea, typing prompt…')
+    console.log('✅ Found textarea')
     ta.focus()
-    ta.value = PROMPT
-    ta.dispatchEvent(new Event('input', { bubbles: true }))
+    console.log('✍️ Typing prompt…')
+    await typeText(ta, PROMPT, 50)
 
-    // small delay before clicking send
-    await delay(1000)
+    // tiny pause before clicking Send
+    await delay(100)
 
     const sendBtn = document.querySelector(
       'button[data-element-id="send-button"]'
@@ -89,6 +89,21 @@
 
     console.log('✉️ Prompt sent.')
     markSent(win)
+  }
+
+  async function typeText(el, text, delayMs = 75) {
+    for (let ch of text) {
+      // append one character
+      el.value += ch
+      // dispatch a proper InputEvent
+      const ev = new InputEvent('input', {
+        bubbles: true,
+        data: ch,
+        inputType: 'insertText'
+      })
+      el.dispatchEvent(ev)
+      await delay(delayMs)
+    }
   }
 
   // Main check routine
