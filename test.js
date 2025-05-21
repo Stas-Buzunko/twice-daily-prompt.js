@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Twice-Daily Prompt Sender (Auto Send)
-// @version      0.5
+// @version      0.6
 // @description  At 9–10 AM & 10–11 PM: open “Daily” chat, type & send your prompt with tiny delays.
 // @match        https://www.typingmind.com/*
 // @grant        none
@@ -10,7 +10,7 @@
   console.log('🔧 Twice-Daily Prompt Sender initializing…')
 
   const WINDOWS = {
-    morning: { start: 9, end: 12, key: 'tm_sent_morning' },
+    morning: { start: 9, end: 10, key: 'tm_sent_morning' },
     evening: { start: 22, end: 23, key: 'tm_sent_evening' }
   }
   const PROMPT =
@@ -72,7 +72,7 @@
     ta.dispatchEvent(new Event('input', { bubbles: true }))
 
     // small delay before clicking send
-    await delay(500)
+    await delay(1000)
 
     const sendBtn = document.querySelector(
       'button[data-element-id="send-button"]'
@@ -92,7 +92,7 @@
   }
 
   // Main check routine
-  function checkAndMaybeSend() {
+  async function checkAndMaybeSend() {
     const now = new Date()
     const h = now.getHours()
     console.log(`\n⏱️ check at ${now.toLocaleTimeString()}`)
@@ -103,6 +103,8 @@
         console.log(`• In ${name} window (${win.start}–${win.end})`)
         if (!hasSent(win)) {
           console.log(`  → Not yet sent for ${name}.`)
+
+          await delay(3000)
           if (navigateToDaily()) {
             sendPromptSequence(win).catch(err =>
               console.error('Error in send sequence:', err)
