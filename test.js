@@ -1,105 +1,80 @@
 // ==UserScript==
-// @name         Twice-Daily Prompt Sender (Debug Mode)
-// @version      0.2
-// @description  Automate & debug sending your daily goals prompt at 9–10 AM and 10–11 PM
+// @name         Twice-Daily Prompt Sender (Dry‐Run with “Daily” Tab Jump)
+// @version      0.3
+// @description  Every minute: if 9–10AM or 10–11PM, click your “Daily” chat and console.log the prompt.
 // @match        https://www.typingmind.com/*
 // @grant        none
 // ==/UserScript==
 
-;(function () {
-  console.log('🔧 Twice-Daily Prompt Sender (Debug) initializing…')
-  alert('Extension loaded: Twice-Daily Prompt Sender (Debug)')
+;(function(){
+  console.log("🔧 Twice-Daily Prompt Sender (Dry‐Run) initializing…");
 
-  // 1) Define windows + storage keys + prompt text
   const WINDOWS = {
-    morning: { start: 9, end: 12, key: 'tm_sent_morning' },
-    evening: { start: 22, end: 23, key: 'tm_sent_evening' }
-  }
-  const PROMPT =
-    "what's the one thing you can do today to bring you closer to goals?"
+    morning: { start: 9,  end: 12, key: "tm_sent_morning" },
+    evening: { start: 22, end: 23, key: "tm_sent_evening" }
+  };
+  const PROMPT = "what's the one thing you can do today to bring you closer to goals?";
 
   function todayStr() {
-    return new Date().toISOString().slice(0, 10)
+    return new Date().toISOString().slice(0,10);
   }
 
-  // 2) Persistence checks
   function hasSent(win) {
-    const val = localStorage.getItem(win.key)
-    console.log(`Checking "${win.key}"`, { stored: val, today: todayStr() })
-    return val === todayStr()
+    const v = localStorage.getItem(win.key);
+    console.log(`  [${win.key}] stored=${v} today=${todayStr()}`);
+    return v === todayStr();
   }
   function markSent(win) {
-    localStorage.setItem(win.key, todayStr())
-    console.log(`Marked "${win.key}" as sent for ${todayStr()}`)
-    alert(`Marked "${win.key}" as sent for ${todayStr()}`)
+    localStorage.setItem(win.key, todayStr());
+    console.log(`  → marked ${win.key} as sent for ${todayStr()}`);
   }
 
-  // 3) Fill & click Send
-  function sendPrompt() {
-    console.log('Attempting to send prompt…')
-    alert('📨 sendPrompt() called')
-
-    // 3a) Find the textarea
-    let ta =
-      document.querySelector('textarea') ||
-      document.querySelector('[data-element-id="chat-input-textarea"]')
-    if (!ta) {
-      console.error('❌ No chat textarea found!')
-      alert('❌ No chat textarea found!')
-      return
+  // Try to click the “Daily” chat in the sidebar
+  function navigateToDaily() {
+    const sidebar = document.getElementById("sidebar-middle-part");
+    if (!sidebar) {
+      console.warn("❌ #sidebar-middle-part not found");
+      return false;
     }
-    console.log('Found textarea:', ta)
-    alert('✅ Textarea found')
+    const dailyTab = Array.from(
+      sidebar.querySelectorAll("div.truncate")
+    ).find(div => div.textContent.trim()==="Daily");
 
-    // 3b) Fill & dispatch input event
-    ta.focus()
-    ta.value = PROMPT
-    ta.dispatchEvent(new Event('input', { bubbles: true }))
-    console.log('Filled textarea with prompt.')
-
-    // 3c) Find and click Send button
-    let sendBtn =
-      document.querySelector('button[data-element-id="send-button"]') ||
-      Array.from(document.querySelectorAll('button')).find(b =>
-        /send/i.test(b.innerText)
-      )
-
-    if (!sendBtn) {
-      console.error('❌ No Send button found!')
-      alert('❌ No Send button found!')
-      return
+    if (!dailyTab) {
+      console.warn("❌ “Daily” tab not found under #sidebar-middle-part");
+      return false;
     }
-    console.log('Found Send button:', sendBtn)
-    alert('✅ Send button found; clicking…')
-
-    sendBtn.click()
-    console.log('Clicked Send button.')
-    alert('✉️ Prompt sent!')
+    dailyTab.click();
+    console.log("✅ Clicked “Daily” tab");
+    return true;
   }
 
-  // 4) Scheduler
+  // Main check/send routine (dry-run)
   function checkAndMaybeSend() {
-    const now = new Date()
-    const h = now.getHours()
-    console.log(`Checking time: ${now.toLocaleTimeString()}`)
+    const now = new Date();
+    const h = now.getHours();
+    console.log(`\n⏱️ check at ${now.toLocaleTimeString()}`);
 
-    for (let name of ['morning', 'evening']) {
-      const win = WINDOWS[name]
+    for (let name of ["morning","evening"]) {
+      const win = WINDOWS[name];
       if (h >= win.start && h < win.end) {
-        console.log(`We are in the "${name}" window (${win.start}–${win.end})`)
+        console.log(`• In ${name} window (${win.start}–${win.end})`);
         if (!hasSent(win)) {
-          console.log(`Not yet sent for "${name}" today—sending now.`)
-          alert(`Time to send your ${name} prompt!`)
-          sendPrompt()
-          markSent(win)
+          console.log(`  → Not yet sent for ${name}. Attempting…`);
+          if (navigateToDaily()) {
+            console.log(`    📝 WOULD SEND PROMPT: "${PROMPT}"`);
+            markSent(win);
+          } else {
+            console.log("    💡 Aborting send because “Daily” tab not found.");
+          }
         } else {
-          console.log(`Already sent "${name}" prompt today.`)
+          console.log(`  → Already sent your ${name} prompt today.`);
         }
       }
     }
   }
 
-  // Kick off: immediate + every minute
-  checkAndMaybeSend()
-  setInterval(checkAndMaybeSend, 60_000)
-})()
+  // Kickoff: run immediately + every 60s
+  checkAndMaybeSend();
+  setInterval(checkAndMaybeSend, 60_000);
+})();
